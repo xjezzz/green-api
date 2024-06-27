@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Green API Test</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<body>
+<h1>Green API Test</h1>
+<form id="apiForm" method="POST">
+    <label for="idInstance">Instance ID:</label><br>
+    <input type="text" id="idInstance" name="idInstance"><br>
+    <label for="apiToken">API Token:</label><br>
+    <input type="text" id="apiToken" name="apiToken"><br>
+    <button type="submit" onclick="submitForm('/settings')">Get Settings</button>
+    <button type="submit" onclick="submitForm('/state_instance')">Get State Instance</button>
+    <button type="submit" onclick="submitForm('/send_message')">Send Message</button>
+    <button type="submit" onclick="submitForm('/send_file')">Send File By URL</button>
+</form>
+<div id="response"></div>
+
+<script>
+    function submitForm(action) {
+        var form = document.getElementById('apiForm');
+        form.action = action;
+    }
+</script>
+
+</body>
+</html>
