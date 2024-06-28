@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -31,12 +33,17 @@ type File struct {
 }
 
 func main() {
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Fatal("$PORT must be set")
+	}
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/settings", GetSettings)
 	http.HandleFunc("/state_instance", GetStateInstance)
 	http.HandleFunc("/send_message", SendMessage)
 	http.HandleFunc("/send_file", SendFileByUrl)
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
