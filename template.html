@@ -32,6 +32,14 @@
             display: flex;
             justify-content: space-between;
         }
+        .resp{
+            width: 900px;
+            height: 400px;
+            resize: none;
+        }
+        .highlight {
+            border: 1px solid red;
+        }
     </style>
 </head>
 <body>
@@ -48,27 +56,75 @@
             <input type="text" id="apiToken" name="apiToken">
             <button type="button" onclick="submitForm('/settings')">Get Settings</button>
             <button type="button" onclick="submitForm('/state_instance')">Get State Instance</button>
-            <input type="text" id="phoneNumber" name="phoneNumber" placeholder="77771234567">
-            <textarea id="message" name="message" rows="4" placeholder="Hello World!"></textarea>
+            <input type="text" id="phoneNumber1" name="phoneNumber1" placeholder="77771234567">
+            <textarea style="resize: none; width: 450px" id="message" name="message" rows="4" placeholder="Hello World!"></textarea>
             <button type="button" onclick="submitForm('/send_message')">Send Message</button>
+            <input type="text" id="phoneNumber2" name="phoneNumber2" placeholder="77771234567">
             <input type="text" id="fileUrl" name="fileUrl" placeholder="https://my.site.com/">
             <button type="button" onclick="submitForm('/send_file')">Send File By URL</button>
         </form>
     </div>
     <div class="response-section">
-        <h2>Response:</h2>
-        <pre id="serverResponse">{{.Resp}}</pre>
+        <h2>Ответ:</h2>
+        <textarea class="resp">{{.Resp}}</textarea>
+        <a href="/"><button>refresh</button></a>
     </div>
 
 </div>
-<a href="/"><button>refresh</button></a>
 
 <script>
     function submitForm(action) {
         var form = document.getElementById('apiForm');
+        var idInstance = document.getElementById('idInstance');
+        var apiToken = document.getElementById('apiToken');
+        var phoneNumber1 = document.getElementById('phoneNumber1');
+        var message = document.getElementById('message');
+        var phoneNumber2 = document.getElementById('phoneNumber2');
+        var fileUrl = document.getElementById('fileUrl');
+
+        // Удалите подсветку с полей, если она была добавлена ранее
+        idInstance.classList.remove('highlight');
+        apiToken.classList.remove('highlight');
+        phoneNumber1.classList.remove('highlight');
+        message.classList.remove('highlight');
+        phoneNumber2.classList.remove('highlight');
+        fileUrl.classList.remove('highlight');
+
+        // Если поля пустые и действие - 'Get Settings', 'Get State Instance', 'Send Message' или 'Send File By URL', подсветите поля
+        if ((action === '/settings' || action === '/state_instance') && (idInstance.value === '' || apiToken.value === '')) {
+            if (idInstance.value === '') {
+                idInstance.classList.add('highlight');
+            }
+            if (apiToken.value === '') {
+                apiToken.classList.add('highlight');
+            }
+            return;  // Не отправляйте форму, если поля пустые
+        }
+
+        if (action === '/send_message' && (phoneNumber1.value === '' || message.value === '')) {
+            if (phoneNumber1.value === '') {
+                phoneNumber1.classList.add('highlight');
+            }
+            if (message.value === '') {
+                message.classList.add('highlight');
+            }
+            return;  // Не отправляйте форму, если поля пустые
+        }
+
+        if (action === '/send_file' && (phoneNumber2.value === '' || fileUrl.value === '')) {
+            if (phoneNumber2.value === '') {
+                phoneNumber2.classList.add('highlight');
+            }
+            if (fileUrl.value === '') {
+                fileUrl.classList.add('highlight');
+            }
+            return;  // Не отправляйте форму, если поля пустые
+        }
+
         form.action = action;
         form.submit();
     }
+</script>
 </script>
 </body>
 </html>

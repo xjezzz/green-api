@@ -1,58 +1,68 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"net/url"
-	"text/template"
+	"strings"
+)
+
+const (
+	APIBaseURL = "https://7103.api.greenapi.com/waInstance%s/%s/%s"
 )
 
 type TemplateData struct {
 	Resp string
 }
+type Message struct {
+	ChatId  string `json:"chatId"`
+	Message string `json:"message"`
+}
+type File struct {
+	ChatId          string `json:"chatId"`
+	Url             string `json:"urlFile"`
+	FileName        string `json:"fileName"`
+	Caption         string `json:"caption"`
+	QuotedMessageId string `json:"quotedMessageId"`
+}
 
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		resp := r.URL.Query().Get("resp")
-		data := &TemplateData{Resp: resp}
-		tmpl, _ := template.ParseFiles("template.html")
-		tmpl.Execute(w, data)
-	})
+	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/settings", GetSettings)
 	http.HandleFunc("/state_instance", GetStateInstance)
 	http.HandleFunc("/send_message", SendMessage)
-	http.HandleFunc("/send_file", SendFile)
+	http.HandleFunc("/send_file", SendFileByUrl)
 	http.ListenAndServe(":8080", nil)
 }
 
-func GetSettings(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+func handleIndex(w http.ResponseWriter, r *http.Request) {
+	resp := r.URL.Query().Get("resp")
+	data := &TemplateData{Resp: resp}
+	tmpl, err := template.ParseFiles("template.html")
 	if err != nil {
-		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		http.Error(w, "Failed to parse template", http.StatusInternalServerError)
 		return
 	}
-	idInstance := r.FormValue("idInstance")
-	token := r.FormValue("apiToken")
-	link := fmt.Sprintf("https://7103.api.greenapi.com/waInstance%s/getSettings/%s", idInstance, token)
-	body, err := http.Get(link)
+	err = tmpl.Execute(w, data)
 	if err != nil {
-		fmt.Println(err)
+		http.Error(w, "Failed to execute template", http.StatusInternalServerError)
 		return
 	}
-	defer body.Body.Close()
-	resp, err := io.ReadAll(body.Body)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(string(resp))
+}
 
-	encodedResp := url.QueryEscape(string(resp))
-	http.Redirect(w, r, "/?resp="+encodedResp, http.StatusSeeOther)
+func GetSettings(w http.ResponseWriter, r *http.Request) {
+	handleRequest(w, r, "getSettings")
+
 }
 
 func GetStateInstance(w http.ResponseWriter, r *http.Request) {
+	handleRequest(w, r, "getStateInstance")
+}
+func SendMessage(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, "Failed to parse form", http.StatusBadRequest)
@@ -60,7 +70,95 @@ func GetStateInstance(w http.ResponseWriter, r *http.Request) {
 	}
 	idInstance := r.FormValue("idInstance")
 	token := r.FormValue("apiToken")
-	link := fmt.Sprintf("https://7103.api.greenapi.com/waInstance%s/getStateInstance/%s", idInstance, token)
+	phone := r.FormValue("phoneNumber1")
+	text := r.FormValue("message")
+
+	if idInstance == "" || token == "" || phone == "" || text == "" {
+		http.Error(w, "All fields must be filled", http.StatusBadRequest)
+		return
+	}
+	message := Message{ChatId: phone + "@c.us", Message: text}
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	link := fmt.Sprintf("https://7103.api.greenapi.com/waInstance%s/sendMessage/%s", idInstance, token)
+	body, err := http.Post(link, "application/json", bytes.NewReader(jsonMessage))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer body.Body.Close()
+	resp, err := io.ReadAll(body.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	encodedResp := url.QueryEscape(string(resp))
+	http.Redirect(w, r, "/?resp="+encodedResp, http.StatusSeeOther)
+}
+
+func SendFileByUrl(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+	idInstance := r.FormValue("idInstance")
+	token := r.FormValue("apiToken")
+	phone := r.FormValue("phoneNumber2")
+	fileUrl := r.FormValue("fileUrl")
+
+	if idInstance == "" || token == "" || phone == "" || fileUrl == "" {
+		http.Error(w, "All fields must be filled", http.StatusBadRequest)
+		return
+	}
+	ext, err := GetFileContentType(fileUrl)
+	if err != nil {
+		fmt.Println(err)
+		return
+
+	}
+	message := File{ChatId: phone + "@c.us", Url: fileUrl, FileName: ext}
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	link := fmt.Sprintf("https://7103.api.greenapi.com/waInstance%s/sendFileByUrl/%s", idInstance, token)
+	body, err := http.Post(link, "application/json", bytes.NewReader(jsonMessage))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer body.Body.Close()
+	resp, err := io.ReadAll(body.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	encodedResp := url.QueryEscape(string(resp))
+	http.Redirect(w, r, "/?resp="+encodedResp, http.StatusSeeOther)
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request, endpoint string) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+	idInstance := r.FormValue("idInstance")
+	token := r.FormValue("apiToken")
+
+	if idInstance == "" || token == "" {
+		http.Error(w, "All fields must be filled", http.StatusBadRequest)
+		return
+	}
+
+	link := fmt.Sprintf(APIBaseURL, idInstance, endpoint, token)
 	body, err := http.Get(link)
 	if err != nil {
 		fmt.Println(err)
@@ -72,16 +170,24 @@ func GetStateInstance(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(string(resp))
 
 	encodedResp := url.QueryEscape(string(resp))
 	http.Redirect(w, r, "/?resp="+encodedResp, http.StatusSeeOther)
 }
 
-func SendMessage(w http.ResponseWriter, r *http.Request) {
+func GetFileContentType(url string) (string, error) {
+	resp, err := http.Head(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
 
-}
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		return "", fmt.Errorf("No Content-Type header found")
+	}
 
-func SendFile(w http.ResponseWriter, r *http.Request) {
-	// Ваша логика для SendFile
+	mimeType := strings.Split(contentType, ";")[0]
+
+	return mimeType, nil
 }
