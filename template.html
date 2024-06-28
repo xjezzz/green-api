@@ -2,28 +2,73 @@
 <html>
 <head>
     <title>Green API Test</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+        }
+        .form-section {
+            flex: 1;
+            padding: 10px;
+        }
+        .response-section {
+            flex: 2;
+            padding: 10px;
+            border-left: 1px solid #ccc;
+        }
+        input[type="text"] {
+            width: calc(100% - 20px);
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+        button {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+        .label-container {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
 </head>
 <body>
-<h1>Green API Test</h1>
-<form id="apiForm" method="POST">
-    <label for="idInstance">Instance ID:</label><br>
-    <input type="text" id="idInstance" name="idInstance"><br>
-    <label for="apiToken">API Token:</label><br>
-    <input type="text" id="apiToken" name="apiToken"><br>
-    <button type="submit" onclick="submitForm('/settings')">Get Settings</button>
-    <button type="submit" onclick="submitForm('/state_instance')">Get State Instance</button>
-    <button type="submit" onclick="submitForm('/send_message')">Send Message</button>
-    <button type="submit" onclick="submitForm('/send_file')">Send File By URL</button>
-</form>
-<div id="response"></div>
+<div class="container">
+    <div class="form-section">
+        <form id="apiForm" method="POST">
+            <div class="label-container">
+                <label for="idInstance">Instance ID:</label>
+            </div>
+            <input type="text" id="idInstance" name="idInstance">
+            <div class="label-container">
+                <label for="apiToken">API Token:</label>
+            </div>
+            <input type="text" id="apiToken" name="apiToken">
+            <button type="button" onclick="submitForm('/settings')">Get Settings</button>
+            <button type="button" onclick="submitForm('/state_instance')">Get State Instance</button>
+            <input type="text" id="phoneNumber" name="phoneNumber" placeholder="77771234567">
+            <textarea id="message" name="message" rows="4" placeholder="Hello World!"></textarea>
+            <button type="button" onclick="submitForm('/send_message')">Send Message</button>
+            <input type="text" id="fileUrl" name="fileUrl" placeholder="https://my.site.com/">
+            <button type="button" onclick="submitForm('/send_file')">Send File By URL</button>
+        </form>
+    </div>
+    <div class="response-section">
+        <h2>Response:</h2>
+        <pre id="serverResponse">{{.Resp}}</pre>
+    </div>
+
+</div>
+<a href="/"><button>refresh</button></a>
 
 <script>
     function submitForm(action) {
         var form = document.getElementById('apiForm');
         form.action = action;
+        form.submit();
     }
 </script>
-
 </body>
 </html>
